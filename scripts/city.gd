@@ -7,7 +7,8 @@ extends Node3D
 const ROOF_Y := 90.0
 const ROOF_HALF := 18.0
 const RIVER_Z := -600.0
-const BUCHO_WIN := Vector3(-45.5, 74.0, -180.0)
+const OFFICE_WIN := Vector3(-45.5, 74.0, -180.0)
+const TOP_FLOOR := 86.0
 const CROSS := Vector3(30, 0, -510)
 const SUPER := Vector3(-60, 0, -720)
 const KONBINI := Vector3(60, 0, -712)
@@ -61,7 +62,7 @@ func build() -> void:
 	_ground()
 	_far()
 	_start_tower()
-	_bucho_tower()
+	_office_tower()
 	_buildings()
 	_crossing()
 	_super()
@@ -379,7 +380,14 @@ func _bmat() -> ShaderMaterial:
 # ---------------------------------------------------------------- 会社の屋上
 func _start_tower() -> void:
 	bmat = _bmat()
-	_add_building(Vector3.ZERO, Vector3(ROOF_HALF * 2, ROOF_Y, ROOF_HALF * 2), Color(0.36, 0.38, 0.42), 0, 0.8)
+	# 最上階だけ -Z 側が奥まっていて、窓際の部長の席が外から見える
+	var tc := Color(0.36, 0.38, 0.42)
+	var w := ROOF_HALF * 2
+	var rec := 1.6
+	_add_building(Vector3.ZERO, Vector3(w, TOP_FLOOR, w), tc, 0, 0.8)
+	_add_building(Vector3(0, TOP_FLOOR, rec * 0.5), Vector3(w, ROOF_Y - 0.6 - TOP_FLOOR, w - rec), tc, 0, 0.2, false)
+	_add_building(Vector3(0, ROOF_Y - 0.6, 0), Vector3(w, 0.6, w), tc, 0, 0.0, false)
+	_boss_floor()
 	var b := Kit.Builder.new()
 	var y := ROOF_Y
 	var gray := Color(0.42, 0.42, 0.43)
@@ -461,8 +469,52 @@ func roof_block(p: Vector3) -> Vector3:
 	return p
 
 
-# ---------------------------------------------------------------- 部長のいる階
-func _bucho_tower() -> void:
+# 会社の最上階。屋上の縁から一瞬沈んだときに、窓際でまだ働く部長が見える
+func _boss_floor() -> void:
+	var z := -ROOF_HALF
+	var fy := TOP_FLOOR
+	var g := Kit.Builder.new()
+	var s := Kit.Builder.new()
+	var ins := -ROOF_HALF + 1.6
+	# 奥の壁。明かりが点いているのは部長の席のまわりだけ
+	g.box(Vector3(-2.5, fy + 1.7, ins - 0.03), Vector3(9, 3.3, 0.04), Color(0.36, 0.35, 0.33))
+	for sx in [-1.0, 1.0]:
+		var cx: float = -2.5 + sx * 13.25
+		g.box(Vector3(cx, fy + 1.7, ins - 0.03), Vector3(17.5, 3.3, 0.04), Color(0.1, 0.1, 0.12))
+	for x in [-4.5, -0.5]:
+		g.box(Vector3(x, ROOF_Y - 0.63, z + 0.9), Vector3(2.8, 0.04, 0.25), Color(1.3, 1.3, 1.35))
+	g.box(Vector3(-2.5, fy + 0.02, z + 0.8), Vector3(9, 0.04, 1.6), Color(0.3, 0.31, 0.34))
+	# 書類棚とホワイトボード
+	for x in [-6.0, -5.2, 1.0]:
+		g.box(Vector3(x, fy + 0.9, ins - 0.25), Vector3(0.75, 1.8, 0.4), Color(0.32, 0.33, 0.35))
+	g.box(Vector3(-0.4, fy + 1.6, ins - 0.06), Vector3(1.6, 1.0, 0.04), Color(0.75, 0.75, 0.73))
+	# 部長の机（電気スタンドとモニター）
+	g.box(Vector3(-3.2, fy + 0.72, z + 0.75), Vector3(1.6, 0.06, 0.8), Color(0.45, 0.32, 0.22))
+	g.box(Vector3(-2.55, fy + 1.0, z + 0.75), Vector3(0.04, 0.36, 0.5), Color(0.55, 0.7, 0.95) * 1.3)
+	g.box(Vector3(-3.85, fy + 1.12, z + 0.6), Vector3(0.22, 0.1, 0.22), Color(1.6, 1.45, 1.1))
+	g.box(Vector3(-3.75, fy + 0.95, z + 0.6), Vector3(0.03, 0.4, 0.03), Color(0.2, 0.2, 0.2))
+	g.box(Vector3(-3.1, fy + 0.79, z + 0.6), Vector3(0.35, 0.08, 0.25), Color(0.85, 0.85, 0.82))
+	# 帰ったあとの、暗い机
+	for x in [-9.0, 4.0, 8.5, 13.0, -13.5]:
+		g.box(Vector3(x, fy + 0.72, z + 0.8), Vector3(1.6, 0.06, 0.7), Color(0.14, 0.14, 0.15))
+		g.box(Vector3(x, fy + 1.0, z + 0.6), Vector3(0.5, 0.32, 0.04), Color(0.05, 0.05, 0.06))
+	Kit.add_mesh(self, g.commit(Kit.glow_mat(1.0)))
+	# 窓の桟
+	var x := -6.0
+	while x <= 6.01:
+		s.box(Vector3(x, fy + 1.7, z + 0.04), Vector3(0.1, 3.4, 0.08), Color(0.2, 0.22, 0.25))
+		x += 2.0
+	s.box(Vector3(0, fy + 0.05, z + 0.04), Vector3(12.1, 0.1, 0.08), Color(0.2, 0.22, 0.25))
+	Kit.add_mesh(self, s.commit(Kit.vc_mat()))
+	# 部長（窓の外を向いて座っている。髪はない）
+	var boss := Kit.person(self, Color(0.85, 0.85, 0.82), Color(0.2, 0.2, 0.22), Vector3(-3.2, fy - 0.42, z + 1.25), true, 1.06)
+	for ch in boss.get_children():
+		if ch is MeshInstance3D and ch.position.y > 1.68:
+			ch.visible = false
+
+
+# ---------------------------------------------------------------- 残業しているよその会社
+func _office_tower() -> void:
 	var c := Vector3(-60, 0, -180)
 	var fy := 72.0
 	var b := Kit.Builder.new()
@@ -500,19 +552,16 @@ func _bucho_tower() -> void:
 			for k in 4:
 				var mp := dp + Vector3(-0.8 + (k % 2) * 1.6, 0.28, -0.6 + (k / 2) * 1.2)
 				g.box(mp, Vector3(0.5, 0.32, 0.04), Color(0.55, 0.7, 0.95) * 1.4)
-	# 窓際の部長の机（窓のほうを向いている）
+	# 窓際の机（窓のほうを向いている）
 	var bd := c + Vector3(12.0, fy + 0.72, 0.0)
 	g.box(bd, Vector3(1.6, 0.06, 2.8), Color(0.5, 0.36, 0.25))
 	g.box(bd + Vector3(-0.4, 0.25, 0.6), Vector3(0.04, 0.32, 0.5), Color(0.55, 0.7, 0.95) * 1.4)
 	g.box(bd + Vector3(0.0, 0.36, -0.9), Vector3(0.1, 0.6, 0.1), Color(0.2, 0.2, 0.2))
 	g.box(bd + Vector3(0.0, 0.66, -0.9), Vector3(0.3, 0.12, 0.3), Color(1.5, 1.4, 1.1))
 	Kit.add_mesh(self, g.commit(Kit.glow_mat(1.0)))
-	# 部長と、もう一人
-	var bucho := Kit.person(self, Color(0.85, 0.85, 0.82), Color(0.2, 0.2, 0.22), bd + Vector3(-1.1, -0.95, 0.2), true, 1.08)
-	bucho.rotation.y = -PI * 0.5
-	for ch in bucho.get_children():
-		if ch is MeshInstance3D and ch.position.y > 1.68:
-			ch.visible = false  # 髪なし
+	# まだ残っている二人
+	var p1 := Kit.person(self, Color(0.82, 0.84, 0.86), Color(0.2, 0.2, 0.22), bd + Vector3(-1.1, -0.95, 0.2), true)
+	p1.rotation.y = -PI * 0.5
 	var other := Kit.person(self, Color(0.82, 0.84, 0.86), Color(0.18, 0.2, 0.25), c + Vector3(6.3, fy - 0.25, -3.5 + 0.9), true)
 	other.rotation.y = PI
 

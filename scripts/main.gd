@@ -290,36 +290,45 @@ func _jump() -> void:
 	tw = create_tween()
 	tw.tween_property(self, "cam_pos", Vector3(4.2, 90.5, -21.6), 3.0).set_trans(Tween.TRANS_SINE)
 	await _wait(3.0)
-	# 踏み出す
+	# 踏み出す → 一瞬沈む（最上階の窓に部長）→ ふわっと戻る
 	man.set_pose("step", 3.0)
 	await _wait(0.35)
-	hud.say("お先失礼します〜", 2.6)
-	Sfx.play("whoosh", -14.0)
-	Sfx.fade("wind_roof", -60.0, 3.0)
+	var p0 := man.position
+	_set_cam(Vector3(4.6, 88.4, -24.6), p0 + Vector3(0, 1.0, 0), "track")
+	Sfx.play("whoosh", -10.0, 0.85)
+	Sfx.fade("wind_roof", -60.0, 2.5)
+	tw = create_tween()
+	tw.tween_property(man, "position", p0 + Vector3(0, -3.0, -0.9), 0.55).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tw.tween_property(man, "position", p0 + Vector3(0, -3.3, -1.1), 0.4).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	tw.tween_property(man, "position", p0 + Vector3(0, 0.5, -1.7), 1.5).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	await _wait(0.55)
+	man.set_pose("stand", 2.5)
+	await _wait(1.9)
+	# 浮かび上がって、進みはじめてから
 	Sfx.fade("wind_fly", -18.0, 2.0)
 	Sfx.fade("city", -17.0, 3.0)
 	pos = man.position
 	heading = 0.0
-	speed = 0.6
+	speed = 0.4
 	state = "takeoff"
 	st = 0.0
-	man.set_pose("stand", 2.0)
-	await _wait(0.8)
 	man.set_pose("fly", 1.1)
+	await _wait(1.0)
+	hud.say("お先失礼します〜", 2.6)
 
 
 func _takeoff(dt: float) -> void:
-	# 落ちない。そのまま水平に滑り出す
+	# 浮かび上がったあとは、そのまま水平に滑り出す
 	speed = move_toward(speed, 3.2, dt * 1.2)
 	pos += Vector3(0, 0, -1) * speed * dt
 	pos.y = move_toward(pos.y, City.ROOF_Y + 1.0, dt * 0.25)
 	man.fly_amt = move_toward(man.fly_amt, 1.0, dt * 0.6)
 	man.wind = move_toward(man.wind, 0.7, dt * 0.3)
 	man.position = pos
-	if st > 2.6 and cam_mode == "fixed":
+	if st > 3.4 and cam_mode != "chase":
 		cam_mode = "chase"
 		cam_k = 1.2
-	if st > 4.5:
+	if st > 5.2:
 		_begin_fly(pos, 0.0, false)
 
 
@@ -421,10 +430,10 @@ func _fly(dt: float) -> void:
 
 # ---------------------------------------------------------------- 道中の出来事
 func _events(dt: float) -> void:
-	# 部長
-	if not done.has("bucho") and pos.distance_to(City.BUCHO_WIN) < 70.0:
-		done["bucho"] = gt
-		_line("あ、まだ部長いる", 3.2)
+	# よその会社もまだ残業している
+	if not done.has("office") and pos.distance_to(City.OFFICE_WIN) < 70.0:
+		done["office"] = gt
+		_line("あ、まだ残ってる", 3.0)
 	# ビル風
 	if not done.has("gust") and pos.z < -280.0:
 		done["gust"] = gt
@@ -595,6 +604,10 @@ func _process(dt: float) -> void:
 
 func _camera(dt: float) -> void:
 	match cam_mode:
+		"track":
+			cam.position = cam_pos
+			_look(man.position + Vector3(0, 0.9, 0), 1.0 - exp(-5.0 * dt))
+			return
 		"walk":
 			var k := 1.0 - exp(-3.0 * dt)
 			cam.position = cam.position.lerp(cam_pos, k)
