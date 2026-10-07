@@ -1,7 +1,7 @@
 extends Node3D
 
 # そらをとぶ
-# タイトル → 屋上（不穏）→ 縁まで歩く →「飛ぶ」→ お先失礼します〜 → 帰宅飛行 → ベランダ → 暗転
+# タイトル → 屋上（不穏）→ 縁まで歩く →「飛ぶ」→ お先失礼しま～す → 帰宅飛行 → ベランダ → 暗転
 
 const GAP_Z := -16.6
 const FLY_MAX := 8.5
@@ -314,7 +314,7 @@ func _jump() -> void:
 	st = 0.0
 	man.set_pose("fly", 1.1)
 	await _wait(1.0)
-	hud.say("お先失礼します〜", 2.6)
+	hud.say("お先失礼しま～す", 2.6)
 
 
 func _takeoff(dt: float) -> void:
@@ -433,7 +433,7 @@ func _events(dt: float) -> void:
 	# よその会社もまだ残業している
 	if not done.has("office") and pos.distance_to(City.OFFICE_WIN) < 70.0:
 		done["office"] = gt
-		_line("あ、まだ残ってる", 3.0)
+		_line("まだそこのビルみんな働いてるな", 3.0)
 	# ビル風
 	if not done.has("gust") and pos.z < -280.0:
 		done["gust"] = gt
